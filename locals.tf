@@ -1,0 +1,137 @@
+locals {
+  environment = var.environment
+  #  bucket_name   = "terraform-backend-${data.aws_caller_identity.current.account_id}"
+  first_two_azs = slice(data.aws_availability_zones.azs.names, 0, 2)
+
+  common_tags = {
+    Project     = "terraform-nginx"
+    Environment = local.environment
+    ManagedBy   = "Terraform"
+  }
+
+  # Ingress and Egress
+  ##########################################################################################
+  # NAT Security Group Rules
+  nat_sg_ingress_rules = {
+    "all_traffic_from_ec2" = {
+      port                         = null #  Must be null when protocol is "-1"
+      protocol                     = "-1" #  "-1" means ALL protocols (TCP, UDP, ICMP, etc.)
+      use_cidr                     = false
+      cidr                         = null
+      referenced_security_group_id = aws_security_group.ec2_sg.id
+    }
+  }
+  nat_sg_egress_rules = {
+    "all_trafic" = {
+      port                         = null #  Must be null when protocol is "-1"
+      protocol                     = "-1" #  "-1" means ALL protocols (TCP, UDP, ICMP, etc.)
+      use_cidr                     = true
+      cidr                         = "0.0.0.0/0"
+      referenced_security_group_id = null
+    }
+  }
+  # EC2 Security Group Rules  
+  ec2_sg_ingress_rules = {
+    "http" = {
+      port                         = 80
+      protocol                     = "tcp"
+      use_cidr                     = false
+      cidr                         = null
+      referenced_security_group_id = aws_security_group.alb_sg.id
+    }
+  }
+  ec2_sg_egress_rules = {
+    "all_traffic" = {
+      port                         = null #  Must be null when protocol is "-1"
+      protocol                     = "-1" #  "-1" means ALL protocols (TCP, UDP, ICMP, etc.)
+      use_cidr                     = true
+      cidr                         = "0.0.0.0/0"
+      referenced_security_group_id = null
+    }
+  }
+  # ALB Security Group Rules   
+  alb_sg_ingress_rules = {
+    "http" = {
+      port                         = 80
+      protocol                     = "tcp"
+      use_cidr                     = true
+      cidr                         = "0.0.0.0/0"
+      referenced_security_group_id = null
+    }
+    "https" = {
+      port                         = 443
+      protocol                     = "tcp"
+      use_cidr                     = true
+      cidr                         = "0.0.0.0/0"
+      referenced_security_group_id = null
+    }
+  }
+  alb_sg_egress_rules = {
+    "http" = {
+      port                         = 80
+      protocol                     = "tcp"
+      use_cidr                     = false
+      cidr                         = null
+      referenced_security_group_id = aws_security_group.ec2_sg.id
+    }
+  }
+  # Endpoint Security Group Rules  
+  endpoints_sg_ingress_rules = {
+    "ec2_https" = {
+      port                         = 443
+      protocol                     = "tcp"
+      use_cidr                     = false
+      cidr                         = null
+      referenced_security_group_id = aws_security_group.ec2_sg.id
+    }
+    "nat_https" = {
+      port                         = 443
+      protocol                     = "tcp"
+      use_cidr                     = false
+      cidr                         = null
+      referenced_security_group_id = aws_security_group.nat_sg.id
+    }
+  }
+  endpoints_sg_egress_rules = {
+    "all_traffic" = {
+      port                         = null #  Must be null when protocol is "-1"
+      protocol                     = "-1" #  "-1" means ALL protocols (TCP, UDP, ICMP, etc.)
+      use_cidr                     = true
+      cidr                         = "0.0.0.0/0"
+      referenced_security_group_id = null
+    }
+  }
+
+  # VPC Interface Enpoints locals
+  ##########################################################################################
+  interface_endpoints = {
+    ssm         = "com.amazonaws.${var.aws_region}.ssm"
+    ssmmessages = "com.amazonaws.${var.aws_region}.ssmmessages"
+    ec2messages = "com.amazonaws.${var.aws_region}.ec2messages"
+  }
+
+  # IAM Policy ARNs
+  ##########################################################################################
+  ssm_policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+
+  # NAT Userata and local
+  ##########################################################################################
+  nat_user_data = base64encode(templatefile("${path.module}/userdata/nat_instance_userdata.tftpl", {}))
+  nat = {
+    instance_type = "t3.micro"
+    ebs_size      = 8
+  }
+
+  # EC2 Userdata and local
+  ##########################################################################################
+  ec2_user_data = base64encode(templatefile("${path.module}/userdata/nginx.tftpl", {
+    asg_name    = "WEB_ASG"
+    environment = local.environment
+  }))
+
+  ec2 = {
+    instance_type = "t3.micro"
+    ebs_size      = 20
+  }
+  website_dns_records = [var.domain_name, "www.${var.domain_name}"]
+}

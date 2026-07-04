@@ -1,0 +1,108 @@
+#!/bin/bash
+set -euo pipefail
+exec > >(tee /var/log/user-data.log)
+exec 2>&1
+
+systemctl enable snap.amazon-ssm-agent.amazon-ssm-agent.service
+systemctl restart snap.amazon-ssm-agent.amazon-ssm-agent.service
+# ---------------------------------------------------------------------
+# 1. DETECT OPERATING SYSTEM & INSTALL/ENABLE NGINX
+# ---------------------------------------------------------------------
+if command -v apt-get &> /dev/null; then
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -y
+    apt-get install -y nginx
+    WEB_USER="www-data"
+elif command -v dnf &> /dev/null; then
+    dnf install -y nginx
+    WEB_USER="nginx"
+elif command -v yum &> /dev/null; then
+    yum install -y nginx
+    WEB_USER="nginx"
+else
+    echo "Unsupported operating system package manager." >&2
+    exit 1
+fi
+
+systemctl start nginx
+systemctl enable nginx
+
+# ---------------------------------------------------------------------
+# 2. FETCH AWS EC2 METADATA VIA IMDSv2 (Resilient Method)
+# ---------------------------------------------------------------------
+
+# Request an IMDSv2 token (6-hour TTL)
+TOKEN=$(curl -s -S -X PUT \
+  "http://169.254.169.254/latest/api/token" \
+  -H "X-aws-ec2-metadata-token-ttl-seconds: 21600" \
+  --connect-timeout 5 \
+  --retry 5
+  )
+
+if [ -n "$TOKEN" ]; then
+    # Retrieve instance metadata using IMDSv2
+    INSTANCE_ID=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" \
+      http://169.254.169.254/latest/meta-data/instance-id)
+
+    INSTANCE_IP=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" \
+      http://169.254.169.254/latest/meta-data/local-ipv4)
+
+    AZ=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" \
+      http://169.254.169.254/latest/meta-data/placement/availability-zone)
+else
+    # Fallback (useful for local testing or if IMDS is unavailable)
+    INSTANCE_ID="unknown-id"
+    INSTANCE_IP="unknown-ip"
+    AZ="unknown-az"
+fi
+
+# ---------------------------------------------------------------------
+# 3. IDENTIFY DEFAULT DOCUMENT ROOT
+# ---------------------------------------------------------------------
+if [ -d "/var/www/html" ]; then
+    HTML_ROOT="/var/www/html"
+elif [ -d "/usr/share/nginx/html" ]; then
+    HTML_ROOT="/usr/share/nginx/html"
+else
+    mkdir -p /var/www/html
+    HTML_ROOT="/var/www/html"
+fi
+
+# ---------------------------------------------------------------------
+# 4. CREATE CUSTOM INDEX.HTML
+# ---------------------------------------------------------------------
+cat <<EOF > "$HTML_ROOT/index.html"
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Nginx on AWS</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background-color: #f4f4f9; }
+        .container { background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 600px; margin: auto; }
+        h1 { color: #00A86B; }
+        p { font-size: 18px; color: #333; }
+        .details { font-family: monospace; background: #eee; padding: 10px; border-radius: 4px; text-align: left; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Nginx Server is Running!</h1>
+        <p>This server was launched via Terraform inside an AWS Auto Scaling Group.</p>
+        <div class="details">
+            <p><strong>Instance ID:</strong> $${INSTANCE_ID}</p>
+            <p><strong>Private IP:</strong> $${INSTANCE_IP}</p>
+            <p><strong>Availability Zone:</strong> $${AZ}</p>
+            <p><strong>ASG Name:</strong> ${asg_name}</p>
+            <p><strong>Environment:</strong> ${environment}</p>
+        </div>
+    </div>
+</body>
+</html>
+EOF
+
+chown "$WEB_USER":"$WEB_USER" "$HTML_ROOT/index.html"
+chmod 644 "$HTML_ROOT/index.html"
+
+systemctl restart nginx

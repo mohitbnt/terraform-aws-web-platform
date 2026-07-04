@@ -1,0 +1,29 @@
+#!/bin/bash
+exec > >(tee /var/log/user-data.log)
+exec 2>&1
+
+systemctl enable snap.amazon-ssm-agent.amazon-ssm-agent.service
+systemctl restart snap.amazon-ssm-agent.amazon-ssm-agent.service
+
+# Enable IP forwarding immediately
+echo 1 > /proc/sys/net/ipv4/ip_forward
+
+# Persist IP forwarding across reboots
+cat << 'EOF' > /etc/sysctl.d/99-ipforward.conf
+net.ipv4.ip_forward = 1
+EOF
+sysctl --system
+
+# Dynamically find the main interface used for the default gateway
+PRIMARY_INTERFACE=$(ip route | grep default | awk '{print $5}' | head -n 1)
+
+# Apply the NAT masquerade rule only to the main outward-facing interface
+iptables -t nat -A POSTROUTING -o "$PRIMARY_INTERFACE" -j MASQUERADE
+
+# Install iptables-persistent to save the rules across reboots
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -y
+apt-get install -y iptables-persistent
+
+# Save current iptables rules so they load on boot
+netfilter-persistent save
