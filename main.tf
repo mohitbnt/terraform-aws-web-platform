@@ -8,6 +8,15 @@ module "network" {
   private_subnet_cidrs = var.private_subnet_cidrs
 }
 
+module "security" {
+  source       = "./modules/security"
+  common_tags  = local.common_tags
+  environment  = local.environment
+  project_name = local.project_name
+  vpc_id       = module.network.vpc_id
+}
+
+
 # Routes
 ###############################################################
 resource "aws_route" "public_route" {
@@ -28,9 +37,9 @@ resource "aws_vpc_endpoint" "ssm_enpoints" {
   service_name        = each.value
   vpc_endpoint_type   = "Interface"
   subnet_ids          = module.network.private_subnet_ids
-  security_group_ids  = [aws_security_group.endpoints_sg.id]
+  security_group_ids  = [module.security.endpoint_security_group_id]
   private_dns_enabled = true
   tags = {
-    Name = "${local.environment}-${local.common_tags.Project}-${each.key}-endpoint"
+    Name = "${var.environment}-${var.project_name}-${each.key}-endpoint"
   }
 }

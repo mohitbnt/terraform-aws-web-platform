@@ -19,6 +19,11 @@ variable "environment" {
     error_message = "The environment variable must be exactly 'dev' or 'prod'."
   }
 }
+
+variable "project_name" {
+  type = string
+}
+
 # SSH Key Pair
 ###############################################################
 variable "key_name" {
