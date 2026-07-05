@@ -82,3 +82,32 @@ variable "domain_name" {
     error_message = "A valid domain must be provided."
   }
 }
+
+#------------------------------------------------------------------------------------
+variable "vpc_cidr" {
+  type = string
+  validation {
+    condition     = can(cidrhost(var.vpc_cidr, 0))
+    error_message = "The vpc cidr must be valid IPv4 CIDR block."
+  }
+}
+
+variable "public_subnet_cidrs" {
+  type        = list(string)
+  description = "Explicit list of CIDR blocks for the public subnets"
+  validation {
+    condition     = alltrue([for cidr in var.public_subnet_cidrs : can(cidrhost(cidr, 0))])
+    error_message = "All elements in the public_subnet_cidrs list must be valid IPv4 CIDR blocks."
+  }
+
+}
+
+variable "private_subnet_cidrs" {
+  type        = list(string)
+  description = "Explicit list of CIDR blocks for the private subnets"
+  validation {
+    # Loops through the list to ensure every single entry is a valid CIDR
+    condition     = alltrue([for cidr in var.private_subnet_cidrs : can(cidrhost(cidr, 0))])
+    error_message = "All elements in the public_subnet_cidrs list must be valid IPv4 CIDR blocks."
+  }
+}

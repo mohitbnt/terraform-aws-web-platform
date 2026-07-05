@@ -1,12 +1,12 @@
 locals {
   environment = var.environment
   #  bucket_name   = "terraform-backend-${data.aws_caller_identity.current.account_id}"
-  first_two_azs = slice(data.aws_availability_zones.azs.names, 0, 2)
-
+  project_name = "terraform-nginx"
   common_tags = {
-    Project     = "terraform-nginx"
-    Environment = local.environment
-    ManagedBy   = "Terraform"
+    Project      = local.project_name
+    project_name = local.project_name
+    Environment  = local.environment
+    ManagedBy    = "Terraform"
   }
 
   # Ingress and Egress
