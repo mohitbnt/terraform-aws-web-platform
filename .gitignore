@@ -1,29 +1,24 @@
-# Terraform State
+# Terraform
+.terraform/
 *.tfstate
 *.tfstate.*
+.terraform.lock.hcl
 
-# Terraform working directory
-.terraform/
+# Terraform variable files
+terraform.tfvars
+
+# Generated SSH keys
+generated/*.pem
 
 # Crash logs
 crash.log
 
-# Variable files
-*.tfvars
-!terraform.tfvars.example
+# Plan files
+*.tfplan
 
-# Sensitive files
-*.pem
+# IDE
+.vscode/
+.idea/
 
-# Local override files
-override.tf
-override.tf.json
-*_override.tf
-*_override.tf.json
-
-# Terraform CLI configuration
-.terraformrc
-terraform.rc
-
-#output files
-output.tf
+# macOS
+.DS_Store

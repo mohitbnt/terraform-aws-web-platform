@@ -8,11 +8,13 @@ variable "environment" {
 }
 
 variable "project_name" {
-  type = string
+  type        = string
+  description = "Project name used for naming AWS resources and applying standard tags."
 }
 
 variable "common_tags" {
-  type = map(string)
+  description = "Common resource tags shared across the project."
+  type        = map(string)
 }
 
 variable "vpc_cidr" {

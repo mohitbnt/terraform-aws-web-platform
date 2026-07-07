@@ -2,7 +2,7 @@
 ###############################################################
 # For NAT SG
 resource "aws_vpc_security_group_ingress_rule" "nat_sg_ingress" {
-  for_each                     = local.nat_sg_ingress_rules
+  for_each                     = var.enable_nat_instance ? local.nat_sg_ingress_rules : {}
   security_group_id            = aws_security_group.nat_sg[0].id
   from_port                    = each.value.port
   to_port                      = each.value.port
@@ -11,7 +11,7 @@ resource "aws_vpc_security_group_ingress_rule" "nat_sg_ingress" {
   referenced_security_group_id = each.value.referenced_security_group_id
 }
 resource "aws_vpc_security_group_egress_rule" "nat_sg_egress" {
-  for_each                     = local.nat_sg_egress_rules
+  for_each                     = var.enable_nat_instance ? local.nat_sg_egress_rules : {}
   security_group_id            = aws_security_group.nat_sg[0].id
   from_port                    = each.value.port
   to_port                      = each.value.port

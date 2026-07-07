@@ -4,6 +4,12 @@ resource "aws_vpc" "main_vpc" {
   cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
   enable_dns_support   = true
+  lifecycle {
+    precondition {
+      condition     = length(var.public_subnet_cidrs) == length(var.private_subnet_cidrs)
+      error_message = "The number of public subnet CIDR blocks must equal the number of private subnet CIDR blocks. Each public subnet is expected to have a corresponding private subnet in the same Availability Zone."
+    }
+  }
   tags = merge(var.common_tags,
     {
       Name = "${var.environment}-${var.project_name}-vpc"
@@ -79,7 +85,7 @@ resource "aws_route_table_association" "public_rt_associations" {
   route_table_id = aws_route_table.public_rt.id
   subnet_id      = aws_subnet.public_subnet[count.index].id
 }
-resource "aws_route_table_association" "private_rt-associations" {
+resource "aws_route_table_association" "private_rt_associations" {
   count          = length(var.private_subnet_cidrs)
   route_table_id = aws_route_table.private_rt.id
   subnet_id      = aws_subnet.private_subnet[count.index].id

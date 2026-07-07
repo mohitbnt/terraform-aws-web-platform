@@ -1,6 +1,6 @@
 variable "environment" {
-  description = "Project environment dev/prod"
   type        = string
+  description = "Project environment dev/prod"
   validation {
     condition     = contains(["dev", "prod"], var.environment)
     error_message = "The environment variable must be exactly 'dev' or 'prod'."
@@ -15,11 +15,6 @@ variable "project_name" {
 variable "common_tags" {
   description = "Common resource tags shared across the project."
   type        = map(string)
-}
-
-variable "vpc_id" {
-  description = "VPC ID passed from network module."
-  type        = string
 }
 
 variable "enable_nat_instance" {

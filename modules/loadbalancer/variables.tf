@@ -1,6 +1,6 @@
 variable "environment" {
-  description = "Project environment dev/prod"
   type        = string
+  description = "Project environment dev/prod"
   validation {
     condition     = contains(["dev", "prod"], var.environment)
     error_message = "The environment variable must be exactly 'dev' or 'prod'."
@@ -22,8 +22,16 @@ variable "vpc_id" {
   type        = string
 }
 
-variable "enable_nat_instance" {
-  type        = bool
-  description = "Controls whether resources required for the NAT instance are created."
-  default     = true
+variable "certificate_arn" {
+  description = "The TLS Certificate ARN for ALB HTTPS listener"
+}
+
+variable "public_subnet_ids" {
+  description = "List of IDs of public subnets."
+  type        = list(string)
+}
+
+variable "alb_security_group_id" {
+  description = "The ALB security Group ID"
+  type        = string
 }

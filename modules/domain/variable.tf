@@ -1,6 +1,6 @@
 variable "environment" {
-  description = "Project environment dev/prod"
   type        = string
+  description = "Project environment dev/prod"
   validation {
     condition     = contains(["dev", "prod"], var.environment)
     error_message = "The environment variable must be exactly 'dev' or 'prod'."
@@ -17,13 +17,17 @@ variable "common_tags" {
   type        = map(string)
 }
 
-variable "vpc_id" {
-  description = "VPC ID passed from network module."
+variable "cloudflare_zone_id" {
+  description = "Cloudfalre Zone ID of your domain name"
   type        = string
 }
 
-variable "enable_nat_instance" {
-  type        = bool
-  description = "Controls whether resources required for the NAT instance are created."
-  default     = true
+variable "domain_name" {
+  description = "The root domain"
+  type        = string
+}
+
+variable "alb_dns_name" {
+  description = "The DNS name of the ALB."
+  type        = string
 }

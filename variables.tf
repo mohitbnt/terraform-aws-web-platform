@@ -1,13 +1,16 @@
 # AWS Region
 ###############################################################
 variable "aws_region" {
-  type    = string
-  default = "us-east-1"
+  type        = string
+  description = "The target AWS region for deployment"
+
   validation {
-    condition     = contains(["us-east-1", "us-east-2"], var.aws_region)
-    error_message = "Authorized regions are limited to us-east-1 or us-east-2."
+    # Regex checks for standard regional patterns like "us-east-1" or "ap-southeast-2"
+    condition     = can(regex("^[a-z]{2}-[a-z]+-[0-9]$", var.aws_region))
+    error_message = "The aws_region value must be a valid AWS region identifier (e.g., us-east-1, eu-west-2)."
   }
 }
+
 # Project Environment
 ###############################################################
 variable "environment" {
@@ -19,50 +22,11 @@ variable "environment" {
     error_message = "The environment variable must be exactly 'dev' or 'prod'."
   }
 }
-
+# Project Name
+###############################################################
 variable "project_name" {
-  type = string
-}
-
-# SSH Key Pair
-###############################################################
-variable "key_name" {
+  description = "Name of the project"
   type        = string
-  description = "Existing EC2 Key Pair name"
-  default     = null
-}
-
-# ASG Variables
-###############################################################
-variable "asg_configuration" {
-  type = map(object({
-    desired            = number
-    min                = number
-    max                = number
-    grace_period       = number
-    protect_scale_in   = bool
-    termination_policy = string
-  }))
-
-  default = {
-    dev = {
-      desired            = 1
-      min                = 1
-      max                = 2
-      grace_period       = 300
-      protect_scale_in   = false
-      termination_policy = "OldestLaunchTemplate"
-    }
-
-    prod = {
-      desired            = 2
-      min                = 2
-      max                = 4
-      grace_period       = 300
-      protect_scale_in   = false
-      termination_policy = "OldestLaunchTemplate"
-    }
-  }
 }
 
 # Cloudflare
@@ -73,7 +37,7 @@ variable "cloudflare_api_token" {
   sensitive   = true
 }
 variable "cloudflare_zone_id" {
-  description = "Cloudflare Zone ID"
+  description = "Cloudflare Zone ID of the domain"
   type        = string
 }
 
@@ -88,7 +52,8 @@ variable "domain_name" {
   }
 }
 
-#------------------------------------------------------------------------------------
+# VPC and Subnets
+###############################################################
 variable "vpc_cidr" {
   type = string
   validation {
@@ -115,4 +80,45 @@ variable "private_subnet_cidrs" {
     condition     = alltrue([for cidr in var.private_subnet_cidrs : can(cidrhost(cidr, 0))])
     error_message = "All elements in the public_subnet_cidrs list must be valid IPv4 CIDR blocks."
   }
+}
+
+# NAT and Application Configuration
+###############################################################
+variable "enable_nat_instance" {
+  type        = bool
+  description = "Controls whether resources required for the NAT instance are created."
+  default     = true
+}
+
+variable "nat_instance_config" {
+  description = "Configuration for the NAT instance."
+
+  type = object({
+    instance_type         = string
+    root_volume_size      = number
+    root_volume_type      = string
+    root_volume_encrypted = bool
+  })
+}
+
+variable "application_config" {
+  description = "Configuration for the application compute fleet."
+
+  type = object({
+    instance_type = string
+
+    root_volume_size      = number
+    root_volume_type      = string
+    root_volume_encrypted = bool
+
+    desired_capacity = number
+    min_size         = number
+    max_size         = number
+
+    health_check_grace_period = number
+    health_check_type         = string
+
+    protect_scale_in   = bool
+    termination_policy = list(string)
+  })
 }

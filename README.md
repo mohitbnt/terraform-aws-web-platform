@@ -1,154 +1,296 @@
-# Terraform AWS Production Infrastructure (V2)
+# Terraform AWS Web Platform
 
-Production-oriented AWS infrastructure built with Terraform following Infrastructure as Code (IaC) best practices.
+A production-inspired Infrastructure as Code (IaC) project built with Terraform that provisions a highly available web application platform on AWS.
+
+The project focuses on **modular Terraform design**, **production best practices**, **security**, and **maintainability**, rather than simply provisioning AWS resources.
+
+---
 
 ## Features
 
-* Remote Terraform Backend (S3 + DynamoDB)
-* Custom VPC with Public & Private Subnets
-* Internet Gateway & NAT Instance
-* Route Tables & Network Segmentation
-* Security Groups (Least Privilege)
-* IAM Roles & Instance Profiles
-* Launch Template
-* Auto Scaling Group
-* Application Load Balancer (ALB)
-* HTTPS with AWS Certificate Manager (ACM)
-* Automatic ACM DNS Validation using Cloudflare
-* Cloudflare DNS Management
-* AWS Systems Manager (SSM)
-* Interface VPC Endpoints
-* Automated Nginx deployment using User Data
+- Modular Terraform architecture
+- Remote state stored in Amazon S3
+- Bootstrap project for backend creation
+- Multi-AZ VPC
+- Public and Private Subnets
+- Internet Gateway
+- Optional NAT Instance
+- VPC Interface Endpoints (SSM)
+- Security Groups using dedicated rule resources
+- IAM Roles and Instance Profiles
+- Auto Scaling Group
+- Launch Templates
+- Automatic SSH Key Pair generation
+- Application Load Balancer
+- HTTPS using ACM
+- Cloudflare DNS integration
+- Infrastructure tagging strategy
+- TFLint support
+- Infracost support
 
 ---
 
-## Architecture
+# Architecture
 
-```text
-Internet
-    │
-    ▼
-Cloudflare DNS
-    │
-    ▼
-Application Load Balancer (HTTPS)
-    │
-    ▼
-Auto Scaling Group
-    │
-    ▼
-Private EC2 Instances (Nginx)
-    │
-    ▼
-Private Subnets
-    │
-    ▼
-NAT Instance
-    │
-    ▼
-Internet Gateway
+```
+                    Internet
+                        │
+                        ▼
+                Cloudflare DNS
+                        │
+                        ▼
+           Application Load Balancer
+                HTTP → HTTPS Redirect
+                        │
+                        ▼
+                Auto Scaling Group
+                        │
+          ┌─────────────┴─────────────┐
+          ▼                           ▼
+      EC2 Instance               EC2 Instance
+          │                           │
+          └─────────────┬─────────────┘
+                        │
+                Private Subnets
+                        │
+        VPC Interface Endpoints (SSM)
+                        │
+             Optional NAT Instance
+                        │
+               Internet Gateway
 ```
 
-Terraform Remote Backend
-
-* Amazon S3
-* DynamoDB State Locking
-
 ---
 
-## Project Structure
+# Repository Structure
 
-```text
+```
 .
-├── README.md
+├── bootstrap/
+├── modules/
+│   ├── compute/
+│   ├── domain/
+│   ├── iam/
+│   ├── loadbalancer/
+│   ├── network/
+│   └── security/
+├── generated/
 ├── backend.tf
-├── backend_bootstrap
-│   ├── dynamodb.tf
-│   └── s3.tf
-├── certificate.tf
-├── cloudflare.tf
-├── compute.tf
-├── data.tf
-├── iam.tf
-├── loadbalancer.tf
-├── locals.tf
-├── network.tf
 ├── providers.tf
-├── security.tf
+├── locals.tf
+├── variables.tf
 ├── terraform.tfvars.example
-├── userdata
-│   ├── nat_instance_userdata.tftpl
-│   └── nginx.tftpl
-└── variables.tf
+└── README.md
 ```
 
 ---
 
-## Deployment
+# Modules
 
-### 1. Bootstrap the Remote Backend
+## Network
 
-Deploy the resources inside `backend_bootstrap/` to create the S3 bucket and DynamoDB table.
+Responsible for:
 
-### 2. Configure the Backend
+- VPC
+- Internet Gateway
+- Public Subnets
+- Private Subnets
+- Route Tables
+- Route Table Associations
 
-Update `backend.tf` with the backend details and initialize Terraform.
+---
 
-```bash
+## Security
+
+Responsible for:
+
+- Security Groups
+- Ingress Rules
+- Egress Rules
+
+---
+
+## IAM
+
+Responsible for:
+
+- IAM Roles
+- IAM Instance Profiles
+- Managed Policy Attachments
+
+---
+
+## Compute
+
+Responsible for:
+
+- Launch Template
+- Auto Scaling Group
+- NAT Instance (optional)
+- EC2 SSH Key Generation
+- User Data Templates
+
+---
+
+## Load Balancer
+
+Responsible for:
+
+- Application Load Balancer
+- Target Group
+- HTTP Listener
+- HTTPS Listener
+
+---
+
+## Domain
+
+Responsible for:
+
+- ACM Certificate
+- DNS Validation
+- Cloudflare DNS Records
+- Certificate Validation
+
+---
+
+# Prerequisites
+
+- Terraform >= 1.5
+- AWS CLI configured
+- Cloudflare API Token
+- AWS Account
+- Cloudflare Hosted Domain
+
+---
+
+# Deployment
+
+## 1. Bootstrap Remote State
+
+```
+cd bootstrap
+
 terraform init
-```
-
-### 3. Configure Variables
-
-```bash
-cp terraform.tfvars.example terraform.tfvars
-```
-
-Update the values according to your environment.
-
-### 4. Deploy
-
-```bash
-terraform plan
 terraform apply
 ```
 
 ---
 
-## Current Version (V2)
+## 2. Configure Backend
 
-### Implemented
-
-* Remote State Backend
-* Networking
-* Security
-* IAM
-* Compute
-* Auto Scaling
-* Load Balancing
-* AWS Systems Manager
-* Interface Endpoints
-* ACM Certificate
-* Cloudflare DNS Validation
-* Cloudflare Website DNS
-* HTTP → HTTPS Redirect
+Update `backend.tf` using the bucket created during bootstrap.
 
 ---
 
-## Upcoming (V3)
+## 3. Configure Variables
 
-* CloudWatch Monitoring & Alarms
-* AWS WAF
-* Terraform Modules
-* GitHub Actions CI/CD
-* Terraform Workspaces
-* CloudFront Integration
+Copy:
+
+```
+terraform.tfvars.example
+```
+
+to
+
+```
+terraform.tfvars
+```
+
+Populate the required values.
 
 ---
 
-## Author
+## 4. Initialize
 
-**Mohit Kumar**
+```
+terraform init
+```
 
-Senior Linux & Cloud Engineer
+---
 
+## 5. Review Plan
+
+```
+terraform plan
+```
+
+---
+
+## 6. Deploy
+
+```
+terraform apply
+```
+
+---
+
+# Generated SSH Keys
+
+Terraform automatically generates SSH key pairs during deployment.
+
+Generated private keys are stored under:
+
+```
+generated/
+```
+
+These files are intentionally excluded from version control.
+
+---
+
+# Project Highlights
+
+This project demonstrates:
+
+- Infrastructure modularization
+- Module composition
+- Reusable Terraform modules
+- Dependency management
+- Auto Scaling
+- Secure private infrastructure
+- Cloudflare integration
+- ACM DNS validation
+- Production-inspired tagging strategy
+
+---
+
+# Future Improvements
+
+- Terraform Workspaces
+- HCP Terraform (Terraform Cloud)
+- GitHub Actions CI/CD
+- Checkov
+- Sentinel Policies
+- NAT Gateway support
+- Golden AMIs
+- Multi-Environment deployment
+- Multi-Region deployment
+
+---
+
+# Learning Objectives
+
+This repository was created to practice production-style Terraform development rather than isolated Terraform syntax.
+
+Topics covered include:
+
+- Modules
+- Variables
+- Outputs
+- Locals
+- Data Sources
+- Remote State
+- IAM
+- Networking
+- Load Balancers
+- Auto Scaling
+- Cloudflare
+- ACM
+- Infrastructure Best Practices
+
+---
+
+# License
+
+This project is provided for learning and demonstration purposes.

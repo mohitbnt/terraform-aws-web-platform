@@ -1,7 +1,7 @@
 #S3 Bucket, Versioning and encryption
 
 resource "aws_s3_bucket" "terraform_state" {
-  bucket = local.bucket_name
+  bucket = "bucket_name"
   lifecycle {
     prevent_destroy = true
   }
