@@ -16,7 +16,6 @@ variable "aws_region" {
 variable "environment" {
   type        = string
   description = "Project environment dev/prod"
-  default     = "prod"
   validation {
     condition     = contains(["dev", "prod"], var.environment)
     error_message = "The environment variable must be exactly 'dev' or 'prod'."
