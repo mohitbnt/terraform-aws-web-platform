@@ -25,8 +25,6 @@ The project focuses on **modular Terraform design**, **production best practices
 - HTTPS using ACM
 - Cloudflare DNS integration
 - Infrastructure tagging strategy
-- TFLint support
-- Infracost support
 
 ---
 
