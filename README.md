@@ -252,21 +252,7 @@ This project demonstrates:
 - Cloudflare integration
 - ACM DNS validation
 - Production-inspired tagging strategy
-
----
-
-# Future Improvements
-
-- Terraform Workspaces
-- HCP Terraform (Terraform Cloud)
-- GitHub Actions CI/CD
-- Checkov
-- Sentinel Policies
-- NAT Gateway support
-- Golden AMIs
-- Multi-Environment deployment
-- Multi-Region deployment
-
+  
 ---
 
 # Learning Objectives
